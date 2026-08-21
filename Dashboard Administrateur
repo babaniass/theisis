@@ -1,0 +1,101 @@
+// src/app/(admin)/dashboard/page.tsx
+import { createServerSupabaseClient } from '@/lib/supabase';
+import { AppShell } from '@/components/layout/app-shell';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { redirect } from 'next/navigation';
+
+export default async function AdminDashboardPage() {
+  const supabase = createServerSupabaseClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session) redirect('/login');
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('first_name, last_name, role_id, roles(name)')
+    .eq('id', session.user.id)
+    .single();
+
+  if (profile?.roles?.name !== 'ADMINISTRATEUR') redirect('/unauthorized');
+
+  // Aggregated stats (server-side)
+  const { count: totalCandidates } = await supabase
+    .from('candidates')
+    .select('*', { count: 'exact', head: true });
+
+  const { count: totalStudents } = await supabase
+    .from('doctoral_students')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'ACTIVE');
+
+  const { count: pendingPayments } = await supabase
+    .from('payments')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'UNDER_REVIEW');
+
+  const { count: upcomingDefenses } = await supabase
+    .from('defense_requests')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'SCHEDULED');
+
+  const { count: totalPublications } = await supabase
+    .from('scientific_outputs')
+    .select('*', { count: 'exact', head: true });
+
+  const stats = [
+    { label: 'Candidats', value: totalCandidates ?? 0, badge: 'info' as const },
+    { label: 'Doctorants actifs', value: totalStudents ?? 0, badge: 'success' as const },
+    { label: 'Paiements en attente', value: pendingPayments ?? 0, badge: 'warning' as const },
+    { label: 'Soutenances planifiées', value: upcomingDefenses ?? 0, badge: 'default' as const },
+    { label: 'Publications', value: totalPublications ?? 0, badge: 'secondary' as const },
+  ];
+
+  return (
+    <AppShell role="ADMINISTRATEUR" userName={`${profile.first_name} ${profile.last_name}`}>
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Tableau de bord</h2>
+          <p className="text-muted-foreground">Vue d'ensemble de l'école doctorale</p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+          {stats.map((stat) => (
+            <Card key={stat.label}>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">{stat.label}</CardTitle>
+                <Badge variant={stat.badge}>{stat.value}</Badge>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stat.value}</div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Candidatures récentes</CardTitle>
+              <CardDescription>Dernières candidatures soumises</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">Données chargées depuis PostgreSQL avec RLS</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Inscriptions en cours</CardTitle>
+              <CardDescription>Statut des inscriptions 2025-2026</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">Requêtes agrégées côté serveur</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </AppShell>
+  );
+}
