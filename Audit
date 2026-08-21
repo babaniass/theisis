@@ -1,0 +1,33 @@
+// src/server/services/audit-service.ts
+import { createServiceClient } from '@/lib/supabase';
+import type { AuditAction } from '@/types';
+
+export async function logAudit(params: {
+  actorId: string | null;
+  action: AuditAction;
+  resourceType: string;
+  resourceId?: string;
+  resourceBusinessId?: string;
+  beforeState?: Record<string, unknown>;
+  afterState?: Record<string, unknown>;
+  requestId?: string;
+  severity?: string;
+}) {
+  const supabase = createServiceClient();
+  const { error } = await supabase.from('audit_logs').insert({
+    actor_id: params.actorId,
+    action: params.action,
+    resource_type: params.resourceType,
+    resource_id: params.resourceId,
+    resource_business_id: params.resourceBusinessId,
+    before_state: params.beforeState,
+    after_state: params.afterState,
+    request_id: params.requestId,
+    severity: params.severity ?? 'INFO',
+    timestamp: new Date().toISOString(),
+  });
+
+  if (error) {
+    console.error('Audit log failed:', error);
+  }
+}
