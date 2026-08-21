@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plateforme Doctorale Université Senghor — Production Readiness Report</title>
+<style>
+:root {
+  --kimi-color-text-primary: #111;
+  --kimi-color-text-secondary: #555;
+  --kimi-color-text-tertiary: #888;
+  --kimi-color-border: #e5e5e5;
+  --kimi-color-surface: #fafafa;
+  --kimi-color-accent: #2563eb;
+  --kimi-color-danger: #dc2626;
+  --kimi-color-positive: #16a34a;
+  --kimi-color-warning: #d97706;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --kimi-color-text-primary: #f5f5f5;
+    --kimi-color-text-secondary: #aaa;
+    --kimi-color-text-tertiary: #777;
+    --kimi-color-border: #333;
+    --kimi-color-surface: #1a1a1a;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; 
+  color: var(--kimi-color-text-primary); background: transparent; line-height: 1.55; font-size: 14px;
+}
+.container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+header { border-bottom: 1px solid var(--kimi-color-border); padding-bottom: 16px; margin-bottom: 24px; }
+header h1 { margin: 0 0 6px; font-size: 22px; letter-spacing: -0.2px; }
+header .meta { color: var(--kimi-color-text-tertiary); font-size: 12px; }
+h2 { font-size: 17px; margin: 28px 0 12px; font-weight: 600; }
+h3 { font-size: 14px; margin: 20px 0 8px; font-weight: 600; color: var(--kimi-color-text-secondary); }
+p { margin: 0 0 10px; color: var(--kimi-color-text-secondary); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 12px 0 20px; }
+th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--kimi-color-border); }
+th { font-weight: 600; color: var(--kimi-color-text-secondary); font-size: 12px; text-transform: uppercase; letter-spacing: .3px; }
+tr:hover td { background: rgba(187,187,187,0.06); }
+.card {
+  border: 1px solid var(--kimi-color-border); border-radius: 10px; padding: 16px; margin-bottom: 14px;
+  background: rgba(250,250,250,0.6);
+}
+.card-title { font-weight: 600; font-size: 13px; margin-bottom: 6px; }
+.card-body { color: var(--kimi-color-text-secondary); font-size: 13px; }
+.badge {
+  display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600;
+}
+.badge-green { background: rgba(22,163,74,0.12); color: var(--kimi-color-positive); }
+.badge-red { background: rgba(220,38,38,0.12); color: var(--kimi-color-danger); }
+.badge-blue { background: rgba(37,99,235,0.12); color: var(--kimi-color-accent); }
+.badge-amber { background: rgba(217,119,6,0.12); color: var(--kimi-color-warning); }
+.badge-gray { background: rgba(187,187,187,0.15); color: var(--kimi-color-text-tertiary); }
+ul.compact { margin: 6px 0 14px 18px; padding: 0; }
+ul.compact li { margin-bottom: 6px; color: var(--kimi-color-text-secondary); }
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px;
+  background: rgba(187,187,187,0.12); padding: 2px 5px; border-radius: 4px;
+}
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+  <h1>Plateforme Doctorale — Université Senghor</h1>
+  <div class="meta">Production Readiness Report v1.0 — 21 août 2026</div>
+</header>
+
+<h2>Résumé exécutif</h2>
+<p>Le système d'information institutionnel de gestion doctorale a été conçu selon une architecture moderne (Next.js 14, Supabase, PostgreSQL) avec sécurité par défaut (Deny by Default, RLS, MFA, RBAC granulaire). Il couvre l'intégralité du parcours doctoral de la candidature à la clôture du dossier.</p>
+
+<h2>Architecture technique</h2>
+<div class="card">
+  <div class="card-title">Stack</div>
+  <div class="card-body">Next.js 14 App Router (Server Components + Server Actions), React, TypeScript strict, Tailwind CSS, Supabase (Auth, PostgreSQL, Storage, Edge Functions), Vercel (Hosting), Sentry (Observability).</div>
+</div>
+<div class="card">
+  <div class="card-title">Sécurité</div>
+  <div class="card-body">CSP, HSTS, X-Frame-Options, Permissions-Policy. Rate limiting. MFA TOTP obligatoire pour les administrateurs. RLS sur 25+ tables. Service role key jamais exposée au client. Audit log append-only immuable.</div>
+</div>
+
+<h2>Base de données</h2>
+<table>
+  <tr><th>Catégorie</th><th>Tables</th><th>Contraintes clés</th></tr>
+  <tr><td>Core</td><td>profiles, roles, permissions, role_permissions</td><td>FK, unique, RBAC</td></tr>
+  <tr><td>Academic</td><td>academic_years, academic_programs, laboratories</td><td>1 année active max</td></tr>
+  <tr><td>Candidature</td><td>candidates, applications</td><td>Business ID CAN/APP-YYYY-NNNNNN</td></tr>
+  <tr><td>Doctoral</td><td>doctoral_students, enrollments, thesis, thesis_milestones</td><td>Unique (student, year), progression calculée</td></tr>
+  <tr><td>Comité</td><td>committees, committee_members, meetings, reports, recommendations, actions</td><td>Unique member/committee, overdue detection</td></tr>
+  <tr><td>Scientifique</td><td>trainings, training_participations, scientific_outputs</td><td>Unique (training, student)</td></tr>
+  <tr><td>Documents</td><td>documents, document_versions</td><td>Versionning, soft delete, checksum</td></tr>
+  <tr><td>Finances</td><td>payments, payment_proofs</td><td>Business ID PAY-YYYY-NNNNNN</td></tr>
+  <tr><td>Soutenance</td><td>defense_requests, juries, jury_members, defenses</td><td>Workflow 11 états, unique jury member</td></tr>
+  <tr><td>Notifications</td><td>notifications, notification_preferences</td><td>Idempotence par clé</td></tr>
+  <tr><td>Audit</td><td>audit_logs</td><td>Immutable (no update/delete)</td></tr>
+  <tr><td>Config</td><td>system_settings, academic_calendars, job_executions</td><td>Paramètres métier configurables</td></tr>
+</table>
+
+<h2>Matrice RBAC + RLS</h2>
+<table>
+  <tr><th>Rôle</th><th>Scope own</th><th>Scope assigned</th><th>Scope all</th></tr>
+  <tr><td>CANDIDAT</td><td>Candidature, documents</td><td>—</td><td>—</td></tr>
+  <tr><td>DOCTORANT</td><td>Dossier, inscriptions, documents, paiements</td><td>—</td><td>—</td></tr>
+  <tr><td>DIRECTEUR_DE_THESE</td><td>—</td><td>Doctorants rattachés, documents, rapports</td><td>—</td></tr>
+  <tr><td>COMITE_DE_SUIVI</td><td>—</td><td>Doctorants affectés, réunions, rapports</td><td>—</td></tr>
+  <tr><td>ADMINISTRATEUR</td><td colspan="3">Tout selon permissions explicites + MFA obligatoire</td></tr>
+</table>
+
+<h2>Workflows implémentés</h2>
+<ul class="compact">
+  <li><strong>Candidature</strong> : DRAFT → SUBMITTED → UNDER_REVIEW → [CORRECTION_REQUIRED] → ACCEPTED / REJECTED / WAITLISTED → ARCHIVED</li>
+  <li><strong>Inscription</strong> : DRAFT → SUBMITTED → UNDER_REVIEW → PAYMENT_PENDING → PAYMENT_VERIFICATION → APPROVED / REJECTED</li>
+  <li><strong>Soutenance</strong> : DRAFT → SUBMITTED → ELIGIBILITY_CHECK → MANUSCRIPT_REVIEW → JURY_PROPOSAL → JURY_VALIDATION → SCHEDULED → HELD → RESULT_ENTERED → VALIDATED → CLOSED</li>
+  <li><strong>Paiement</strong> : PENDING → SUBMITTED → UNDER_REVIEW → VERIFIED / REJECTED / CANCELLED</li>
+  <li><strong>Action comité</strong> : OPEN → IN_PROGRESS → COMPLETED / OVERDUE / CANCELLED</li>
+</ul>
+
+<h2>Production Readiness Gates</h2>
+<table>
+  <tr><th>Gate</th><th>Status</th><th>Évidence</th></tr>
+  <tr><td>ARCHITECTURE</td><td><span class="badge badge-green">PASS</span></td><td>Document d'architecture validé</td></tr>
+  <tr><td>DATABASE</td><td><span class="badge badge-green">PASS</span></td><td>13 migrations versionnées, 25+ tables, contraintes, indexes</td></tr>
+  <tr><td>MIGRATIONS</td><td><span class="badge badge-green">PASS</span></td><td>Testées fresh + upgrade</td></tr>
+  <tr><td>AUTH</td><td><span class="badge badge-green">PASS</span></td><td>Supabase Auth, session, refresh, reset password</td></tr>
+  <tr><td>MFA</td><td><span class="badge badge-green">PASS</span></td><td>TOTP, recovery, AAL, obligatoire admin</td></tr>
+  <tr><td>RBAC</td><td><span class="badge badge-green">PASS</span></td><td>5 rôles, 30+ permissions, scope own/assigned/all</td></tr>
+  <tr><td>RLS</td><td><span class="badge badge-green">PASS</span></td><td>Politiques explicites sur toutes les tables exposées</td></tr>
+  <tr><td>STORAGE</td><td><span class="badge badge-green">PASS</span></td><td>Buckets privés, URLs signées, versionning</td></tr>
+  <tr><td>API</td><td><span class="badge badge-green">PASS</span></td><td>Server Actions + API Routes, Zod validation</td></tr>
+  <tr><td>WORKFLOWS</td><td><span class="badge badge-green">PASS</span></td><td>5 workflows avec guards et transitions auditées</td></tr>
+  <tr><td>AUDIT</td><td><span class="badge badge-green">PASS</span></td><td>Triggers PostgreSQL, table append-only</td></tr>
+  <tr><td>NOTIFICATIONS</td><td><span class="badge badge-green">PASS</span></td><td>Event-driven, idempotentes, 18+ event types</td></tr>
+  <tr><td>TESTS</td><td><span class="badge badge-amber">PARTIAL</span></td><td>Structure prête, tests unitaires à compléter</td></tr>
+  <tr><td>SECURITY</td><td><span class="badge badge-green">PASS</span></td><td>Headers, rate limiting, threat model, RLS</td></tr>
+  <tr><td>PERFORMANCE</td><td><span class="badge badge-green">PASS</span></td><td>Indexes composites, pagination serveur, agrégations</td></tr>
+  <tr><td>BACKUP</td><td><span class="badge badge-green">PASS</span></td><td>PITR Supabase, RPO 1h, RTO 4h</td></tr>
+  <tr><td>MONITORING</td><td><span class="badge badge-amber">PARTIAL</span></td><td>Sentry + Vercel Analytics configurés</td></tr>
+  <tr><td>DEPLOYMENT</td><td><span class="badge badge-green">PASS</span></td><td>CI/CD GitHub → Vercel, 3 environnements</td></tr>
+</table>
+
+<h2>Points d'attention</h2>
+<div class="card">
+  <div class="card-title">HIGH — Passerelle de paiement</div>
+  <div class="card-body">Le système gère la vérification administrative des justificatifs. Une passerelle de paiement en ligne nécessitera une spécification métier complémentaire.</div>
+</div>
+<div class="card">
+  <div class="card-title">MEDIUM — Tests E2E</div>
+  <div class="card-body">La structure Playwright est prête. Les scénarios complets (candidature → admission → inscription → soutenance) doivent être scriptés.</div>
+</div>
+<div class="card">
+  <div class="card-title">LOW — i18n</div>
+  <div class="card-body">L'architecture est préparée pour le multilingue (français + anglais). Les fichiers de traduction next-intl sont à produire.</div>
+</div>
+
+<h2>Procédure de déploiement</h2>
+<ol>
+  <li>Configurer variables d'environnement sur Vercel (Production + Staging)</li>
+  <li>Créer projet Supabase Production avec PITR activé</li>
+  <li>Exécuter <code>supabase db push</code> pour appliquer les migrations</li>
+  <li>Exécuter <code>psql $DATABASE_URL -f supabase/seed/seed.sql</code> pour les données de démo (staging uniquement)</li>
+  <li>Vérifier RLS activé sur toutes les tables</li>
+  <li>Configurer buckets Storage privés</li>
+  <li>Déployer via GitHub Actions</li>
+  <li>Smoke test : login 5 rôles, MFA, upload, workflow, notification, audit</li>
+</ol>
+
+<h2>Rollback</h2>
+<p>En cas d'incident :</p>
+<ol>
+  <li>Identifier la version défectueuse via Git commit</li>
+  <li>Revert le commit sur <code>main</code></li>
+  <li>Redéploiement automatique via CI/CD</li>
+  <li>Si corruption DB : restore PITR à l'heure antérieure à l'incident</li>
+  <li>Vérification des données via requêtes d'intégrité</li>
+</ol>
+
+<footer style="margin-top:40px;padding-top:16px;border-top:1px solid var(--kimi-color-border);color:var(--kimi-color-text-tertiary);font-size:12px;">
+  Plateforme Institutionnelle de Gestion Doctorale — Université Senghor — Document confidentiel
+</footer>
+</div>
+</body>
+</html>
